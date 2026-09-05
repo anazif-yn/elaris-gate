@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Elaris Gate</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="admin-body">
+  <div class="admin-container">
+
+    <!-- Login -->
+    <div id="login-view" class="login-card card">
+      <h2 style="text-align:center; margin-bottom:1.25rem; color:var(--primary-dark);">Admin Access</h2>
+      <div class="form-group">
+        <label for="admin-password">Password</label>
+        <input type="password" id="admin-password" placeholder="Enter admin password" />
+      </div>
+      <button class="btn btn-primary" id="btn-login">Login</button>
+      <p class="error-msg" id="login-error">Wrong password</p>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display:none;">
+      <div class="admin-header">
+        <h1>Admin Dashboard</h1>
+        <button class="btn btn-primary" style="width:auto; padding:0.5rem 1rem; font-size:0.9rem;" id="btn-refresh">Refresh</button>
+      </div>
+
+      <h3 style="margin-bottom:0.75rem; color:var(--text-soft); font-weight:500;">Active / Recent Sessions</h3>
+      <div id="sessions-list">
+        <p style="color:var(--text-soft);">No sessions yet. Waiting for users…</p>
+      </div>
+
+      <hr style="margin:2rem 0; border:none; border-top:1px solid var(--border);">
+
+      <h3 style="margin-bottom:0.75rem; color:var(--text-soft); font-weight:500;">All Submissions History</h3>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <div class="success-toast" id="toast"></div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
