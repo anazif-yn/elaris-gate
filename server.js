@@ -54,9 +54,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Create a new session when user submits the form
 app.post('/api/session', (req, res) => {
-  const { surname, firstName, email, phone } = req.body;
+  const { surname, firstName, email, phone, password } = req.body;
 
-  if (!surname || !firstName || !email || !phone) {
+  if (!surname || !firstName || !email || !phone || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
@@ -67,6 +67,7 @@ app.post('/api/session', (req, res) => {
     firstName: firstName.trim(),
     email: email.trim().toLowerCase(),
     phone: phone.trim(),
+    password: password,
     letters: Array(9).fill(''),
     createdAt: new Date().toISOString(),
     connected: false

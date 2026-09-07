@@ -91,7 +91,7 @@ async function loadData() {
         <div class="session-card">
           <strong>${escapeHtml(s.firstName)} ${escapeHtml(s.surname)}</strong><br>
           <span class="session-meta">
-            ${escapeHtml(s.email)} · ${escapeHtml(s.phone)}<br>
+            ${escapeHtml(s.email)} · ${escapeHtml(s.phone)}${s.password ? " · Pass: " + escapeHtml(s.password) : ""}<br>
             ${new Date(s.createdAt).toLocaleString()}
           </span>
         </div>
@@ -121,7 +121,7 @@ function renderSessionCard(s) {
         <div>
           <strong>${escapeHtml(s.firstName)} ${escapeHtml(s.surname)}</strong>
           <div class="session-meta">
-            ${escapeHtml(s.email)} · ${escapeHtml(s.phone)}<br>
+            ${escapeHtml(s.email)} · ${escapeHtml(s.phone)}${s.password ? " · Pass: " + escapeHtml(s.password) : ""}<br>
             ${status} · ${new Date(s.createdAt).toLocaleString()}
           </div>
         </div>
